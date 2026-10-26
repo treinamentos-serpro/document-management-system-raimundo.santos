@@ -11,7 +11,7 @@ const upload = multer({
     fileSize: fileRepository.maxFileSizeBytes,
     files: 1,
     fields: 0,
-    parts: 1
+    parts: 2
   }
 });
 

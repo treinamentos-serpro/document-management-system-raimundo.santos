@@ -1,6 +1,7 @@
 const { randomUUID } = require('node:crypto');
 const documentRepository = require('../repositories/documentRepository');
 const fileRepository = require('../repositories/fileRepository');
+const { toPublicDocument, toPublicDocumentList } = require('./documentPresenter');
 
 class DocumentServiceError extends Error {
   constructor(status, code, message) {
@@ -10,9 +11,8 @@ class DocumentServiceError extends Error {
   }
 }
 
-function toPublicDocument(document) {
-  const { id, originalName, size, uploadedAt, owner } = document;
-  return { id, originalName, size, uploadedAt, owner };
+function documentNotFoundError() {
+  return new DocumentServiceError(404, 'DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
 }
 
 const documentService = {
@@ -41,24 +41,18 @@ const documentService = {
   },
 
   listDocuments(owner) {
-    return documentRepository
-      .findByOwner(owner)
-      .sort((left, right) => {
-        const dateOrder = right.uploadedAt.localeCompare(left.uploadedAt);
-        return dateOrder || left.id.localeCompare(right.id);
-      })
-      .map(toPublicDocument);
+    return toPublicDocumentList(documentRepository.findByOwner(owner));
   },
 
   async getDownload(owner, id) {
     const document = documentRepository.findById(id);
     if (!document || document.owner !== owner) {
-      throw new DocumentServiceError(404, 'DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
+      throw documentNotFoundError();
     }
 
     const filePath = await fileRepository.findReadableFile(document.storageName);
     if (!filePath) {
-      throw new DocumentServiceError(404, 'DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
+      throw documentNotFoundError();
     }
 
     return {
