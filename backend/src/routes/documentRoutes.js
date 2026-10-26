@@ -4,13 +4,20 @@ const documentController = require('../controllers/documentController');
 const fileRepository = require('../repositories/fileRepository');
 
 const router = express.Router();
+const allowDevelopmentIdentity = process.env.NODE_ENV !== 'production';
 const upload = multer({
   storage: fileRepository.storage,
-  limits: { fileSize: fileRepository.maxFileSizeBytes, files: 1 }
+  limits: {
+    fileSize: fileRepository.maxFileSizeBytes,
+    files: 1,
+    fields: 0,
+    parts: 1
+  }
 });
 
 function requireUserIdentity(req, res, next) {
-  const userId = req.user?.id ?? req.get('X-User-Id');
+  const userId = req.user?.id
+    ?? (allowDevelopmentIdentity ? req.get('X-User-Id') : undefined);
   if (typeof userId !== 'string' || !userId.trim()) {
     return res.status(401).json({
       error: {
